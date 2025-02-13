@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>이상형 월드컵</title>
+    <!-- Supabase JavaScript 클라이언트 라이브러리 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        text-align: center;
+      }
+      .pair {
+        display: flex;
+        justify-content: center;
+        margin-top: 20px;
+      }
+      .pair img {
+        max-width: 300px;
+        margin: 0 10px;
+        cursor: pointer;
+        border: 2px solid #ccc;
+      }
+      #winner {
+        margin-top: 30px;
+        font-size: 24px;
+      }
+      .match-item {
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        min-height: 300px;
+      }
+      .restaurant-name {
+        font-size: 24px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- 헤드라인 -->
+    <h1></h1>
+    <!-- 헤드라인 바로 아래 라운드/축하 메시지 영역 -->
+    <h2 id="round-info"></h2>
+    <!-- 대진표 영역 -->
+    <div id="game"></div>
+    <!-- 최종 우승자 영역 -->
+    <div id="winner"></div>
+
+    <script>
+      const SUPABASE_URL = "https://webbnaqruijdsegrngpy.supabase.co";
+      const SUPABASE_ANON_KEY =
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndlYmJuYXFydWlqZHNlZ3JuZ3B5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzkyMzY1MDMsImV4cCI6MjA1NDgxMjUwM30.JznJ_7NJzoE1oAX-AsLd8F4oRswxi19Tc0T0FDE5ixs";
+      const supabaseClient = supabase.createClient(
+        SUPABASE_URL,
+        SUPABASE_ANON_KEY
+      );
+
+      let images = [];
+      let currentRound = [];
+      let winners = [];
+
+      // URL에서 region 파라미터를 추출합니다.
+      function getRegionFromURL() {
+        const params = new URLSearchParams(window.location.search);
+        return params.get("region") || "seoul"; // 기본값을 "seoul"로 설정
+      }
+
+      async function fetchImages() {
+        const region = getRegionFromURL();
+
+        // 지역명과 Storage 폴더명이 다르다면, 아래와 같이 매핑할 수 있습니다.
+        const folderMapping = {
+          서울: "seoul",
+          부산: "busan",
+          대구: "daegu",
+          인천: "incheon",
+          광주: "gwangju",
+          대전: "daejeon",
+          울산: "ulsan",
+          세종: "sejong",
+          경기: "gyeonggi",
+          강원: "gangwon",
+          충북: "chungbuk",
+          충남: "chungnam",
+          경북: "gyeongbuk",
+          경남: "gyeongnam",
+          전북: "jeonbuk",
+          전남: "jeonnam",
+          제주: "jeju",
+        };
+        const folder = folderMapping[region] || region;
+
+        // 추출한 폴더명을 사용하여 해당 폴더의 파일 목록을 가져옵니다.
+        const { data: fileList, error: listError } =
+          await supabaseClient.storage
+            .from("my-bucket")
+            .list(folder, { limit: 100, offset: 0 });
+
+        if (listError) {
+          console.error("이미지 데이터를 불러오지 못했습니다:", listError);
+          document.getElementById("game").innerHTML =
+            "<p>이미지를 불러올 수 없습니다.</p>";
+          return;
+        }
+
+        if (!fileList || fileList.length === 0) {
+          document.getElementById("game").innerHTML =
+            "<p>불러올 이미지가 없습니다.</p>";
+          return;
+        }
+
+        // 파일명에 따라 식당 이름을 매핑하는 객체입니다.
+        const restaurantMapping = {
+          // #서울
+          "1_nanpo.jpg": "난포(한식)",
+          "2_chorisanggyeong.jpg": "쵸리상경(한식)",
+          "3_songgyeok.jpg": "송계옥(닭요리)",
+          "4_goldenpigrestaurant.jpg": "금돼지식당(2024 미쉐린 가이드)",
+          "5_contidetulear.jpg": "꽁티드툴레아(브런치)",
+          "6_ojeje.jpg": "오제제(일식)",
+          "7_jestysaloon.jpg": "제스티살룬(햄버거)",
+          "8_wooraeok.jpg": "우래옥(평양냉면)",
+          "9_jinjakdining.jpg": "진작다이닝(일식)",
+          "10_oncheonjib.jpg": "온천집(샤브샤브)",
+          "11_hanikalgugsu.jpg": "하니칼국수(한식)",
+          "12_salthousedeli.jpg": "소금집 델리(샌드위치)",
+          "13_haha.jpg": "하하(중식)",
+          "14_woomihak.jpg": "우미학(숙성 한우)",
+          "15_doughroom.jpg": "도우룸(2024 미쉐린 가이드)",
+          "16_jungsikdang.jpg": "정식당(2024 미쉐린 2스타)",
+
+          // #부산
+          "1_haeundaegalbi.jpg": "해운대 암소갈비집(한우)",
+        };
+
+        images = fileList.map((file) => {
+          const { data: publicData, error: publicError } =
+            supabaseClient.storage
+              .from("my-bucket")
+              .getPublicUrl(`${folder}/${file.name}`);
+
+          if (publicError) {
+            console.error("공개 URL 생성 오류:", publicError);
+            return { image_url: "", name: "" };
+          }
+          return {
+            image_url: publicData.publicUrl,
+            name: restaurantMapping[file.name] || "식당 이름 없음",
+          };
+        });
+        startTournament();
+      }
+
+      // 토너먼트 진행 코드
+
+      function updateRoundInfo() {
+        const roundInfoEl = document.getElementById("round-info");
+        const count = currentRound.length;
+        if (count === 1) {
+          roundInfoEl.textContent = "최종 우승";
+        } else if (count === 2) {
+          roundInfoEl.textContent = "결승";
+        } else if (count > 2) {
+          roundInfoEl.textContent = count + "강";
+        } else {
+          roundInfoEl.textContent = "";
+        }
+      }
+
+      function startTournament() {
+        currentRound = shuffleArray(images);
+        updateRoundInfo();
+        nextMatch();
+      }
+
+      function shuffleArray(array) {
+        let newArray = array.slice();
+        for (let i = newArray.length - 1; i > 0; i--) {
+          let j = Math.floor(Math.random() * (i + 1));
+          [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+        }
+        return newArray;
+      }
+
+      function nextMatch() {
+        const gameDiv = document.getElementById("game");
+        gameDiv.innerHTML = "";
+
+        if (currentRound.length === 0 && winners.length === 0) {
+          gameDiv.innerHTML = "<p>토너먼트를 진행할 이미지가 부족합니다.</p>";
+          return;
+        }
+
+        if (currentRound.length === 1 && winners.length === 0) {
+          document.getElementById("winner").innerHTML =
+            '<img src="' +
+            currentRound[0].image_url +
+            '" alt="Winner" style="max-width:400px;"><br />' +
+            currentRound[0].name +
+            " 입니다!";
+          updateRoundInfo();
+          return;
+        }
+
+        if (currentRound.length >= 2) {
+          const image1 = currentRound.shift();
+          const image2 = currentRound.shift();
+
+          const pairDiv = document.createElement("div");
+          pairDiv.className = "pair";
+
+          const container1 = document.createElement("div");
+          container1.className = "match-item";
+          const img1 = document.createElement("img");
+          img1.src = image1.image_url;
+          img1.alt = "이미지 1";
+          img1.onclick = function () {
+            selectWinner(image1);
+          };
+          container1.appendChild(img1);
+          const name1 = document.createElement("p");
+          name1.className = "restaurant-name";
+          name1.textContent = image1.name;
+          container1.appendChild(name1);
+          pairDiv.appendChild(container1);
+
+          const container2 = document.createElement("div");
+          container2.className = "match-item";
+          const img2 = document.createElement("img");
+          img2.src = image2.image_url;
+          img2.alt = "이미지 2";
+          img2.onclick = function () {
+            selectWinner(image2);
+          };
+          container2.appendChild(img2);
+          const name2 = document.createElement("p");
+          name2.className = "restaurant-name";
+          name2.textContent = image2.name;
+          container2.appendChild(name2);
+          pairDiv.appendChild(container2);
+
+          gameDiv.appendChild(pairDiv);
+        } else {
+          prepareNextRound();
+        }
+      }
+
+      function selectWinner(selectedImage) {
+        winners.push(selectedImage);
+        if (currentRound.length === 0) {
+          prepareNextRound();
+        } else {
+          nextMatch();
+        }
+      }
+
+      function prepareNextRound() {
+        if (winners.length === 0) {
+          document.getElementById("game").innerHTML =
+            "<p>다음 라운드를 진행할 승자가 없습니다.</p>";
+          return;
+        }
+        if (winners.length === 1) {
+          currentRound = winners;
+          document.getElementById("game").innerHTML = "";
+          document.getElementById("winner").innerHTML =
+            '<img src="' +
+            winners[0].image_url +
+            '" alt="Winner" style="max-width:400px;"><br />' +
+            winners[0].name +
+            " 입니다!";
+          updateRoundInfo();
+        } else {
+          currentRound = winners;
+          winners = [];
+          updateRoundInfo();
+          nextMatch();
+        }
+      }
+
+      window.onload = function () {
+        const region = getRegionFromURL();
+
+        // 선택한 지역명을 헤드라인에 표시합니다.
+        document.querySelector("h1").textContent =
+          region + " 지역 최고의 맛집은?";
+        fetchImages();
+      };
+    </script>
+  </body>
+</html>
