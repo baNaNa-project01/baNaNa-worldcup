@@ -9,7 +9,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     button.addEventListener("click", function () {
       // 버튼 클릭 시 game.html?region=지역명 으로 이동합니다.
-      window.location.href = "game.html?region=" + encodeURIComponent(region);
+      window.location.href = "./game.html?region=" + encodeURIComponent(region);
     });
   }
 });
