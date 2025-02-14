@@ -70,6 +70,7 @@
 
         // 지역명과 Storage 폴더명이 다르다면, 아래와 같이 매핑할 수 있습니다.
         const folderMapping = {
+          전체: "all",
           서울: "seoul",
           부산: "busan",
           대구: "daegu",
@@ -90,11 +91,23 @@
         };
         const folder = folderMapping[region] || region;
 
+        // localStorage 캐싱 기능 추가
+        const cacheKey = "images_" + folder;
+        const cachedData = localStorage.getItem(cacheKey);
+        if (cachedData) {
+          images = JSON.parse(cachedData);
+          startTournament();
+          return;
+        }
+
+        // API 트래픽 제한을 위해 300ms 딜레이 추가
+        await new Promise((resolve) => setTimeout(resolve, 300));
+
         // 추출한 폴더명을 사용하여 해당 폴더의 파일 목록을 가져옵니다.
         const { data: fileList, error: listError } =
           await supabaseClient.storage
             .from("my-bucket")
-            .list(folder, { limit: 100, offset: 0 });
+            .list(folder, { limit: 272, offset: 0 });
 
         if (listError) {
           console.error("이미지 데이터를 불러오지 못했습니다:", listError);
@@ -112,42 +125,130 @@
         // 파일명에 따라 식당 이름을 매핑하는 객체입니다.
         const restaurantMapping = {
           // #서울
-          "1_nanpo.jpg": "난포(한식)",
-          "2_chorisanggyeong.jpg": "쵸리상경(한식)",
-          "3_songgyeok.jpg": "송계옥(닭요리)",
-          "4_goldenpigrestaurant.jpg": "금돼지식당(2024 미쉐린 가이드)",
-          "5_contidetulear.jpg": "꽁티드툴레아(브런치)",
-          "6_ojeje.jpg": "오제제(일식)",
-          "7_jestysaloon.jpg": "제스티살룬(햄버거)",
-          "8_wooraeok.jpg": "우래옥(평양냉면)",
-          "9_jinjakdining.jpg": "진작 다이닝(일식)",
-          "10_oncheonjib.jpg": "온천집(샤브샤브)",
-          "11_hanikalgugsu.jpg": "하니칼국수(한식)",
-          "12_salthousedeli.jpg": "소금집 델리(샌드위치)",
-          "13_haha.jpg": "하하(중식)",
-          "14_woomihak.jpg": "우미학(숙성 한우)",
-          "15_doughroom.jpg": "도우룸(2024 미쉐린 가이드)",
-          "16_jungsikdang.jpg": "정식당(2024 미쉐린 2스타)",
+          "seoul_1_nanpo.jpg": "난포(한식)",
+          "seoul_2_chorisanggyeong.jpg": "쵸리상경(한식)",
+          "seoul_3_songgyeok.jpg": "송계옥(닭요리)",
+          "seoul_4_goldenpigrestaurant.jpg": "금돼지식당(2024 미쉐린 가이드)",
+          "seoul_5_contidetulear.jpg": "꽁티드툴레아(브런치)",
+          "seoul_6_ojeje.jpg": "오제제(일식)",
+          "seoul_7_jestysaloon.jpg": "제스티살룬(햄버거)",
+          "seoul_8_wooraeok.jpg": "우래옥(평양냉면)",
+          "seoul_9_jinjakdining.jpg": "진작 다이닝(일식)",
+          "seoul_10_oncheonjib.jpg": "온천집(샤브샤브)",
+          "seoul_11_hanikalgugsu.jpg": "하니칼국수(한식)",
+          "seoul_12_salthousedeli.jpg": "소금집 델리(샌드위치)",
+          "seoul_13_haha.jpg": "하하(중식)",
+          "seoul_14_woomihak.jpg": "우미학(숙성 한우)",
+          "seoul_15_doughroom.jpg": "도우룸(2024 미쉐린 가이드)",
+          "seoul_16_jungsikdang.jpg": "정식당(2024 미쉐린 2스타)",
 
           // #부산
-          "1_haeundaegalbi.jpg": "해운대 암소갈비집(한우)",
-          "2_sogsiwon.jpg": "속시원한 대구탕(단일 메뉴)",
-          "3_twinpork.jpg": "쌍둥이 돼지국밥",
-          "4_geumsu.jpg": "금수복국(복어요리)",
-          "5_baekhwa.jpg": "백화 양곱창",
-          "6_giant.jpg": "거인통닭",
-          "7_gaegeun.jpg": "개금밀면",
-          "8_shoe.jpg": "신발원(만두)",
-          "9_haemok.jpg": "해목(일식)",
-          "10_subyeon.jpg": "수변최고 돼지국밥",
-          "11_bonjeon.jpg": "본전 돼지국밥",
-          "12_tonsho.jpg": "톤쇼우(돈카츠)",
-          "13_palate.jpg": "Palate(파인 다이닝)",
-          "14_dongrae.jpg": "동래 할매파전",
-          "15_original.jpg": "원조 18번 완당(국수)",
-          "16_uhwa.jpg": "유화(스시 오마카세)",
+          "busan_1_haeundaegalbi.jpg": "해운대 암소갈비집(한우)",
+          "busan_2_sogsiwon.jpg": "속시원한 대구탕(단일 메뉴)",
+          "busan_3_twinpork.jpg": "쌍둥이 돼지국밥",
+          "busan_4_geumsu.jpg": "금수복국(복어요리)",
+          "busan_5_baekhwa.jpg": "백화 양곱창",
+          "busan_6_giant.jpg": "거인통닭",
+          "busan_7_gaegeun.jpg": "개금밀면",
+          "busan_8_shoe.jpg": "신발원(만두)",
+          "busan_9_haemok.jpg": "해목(일식)",
+          "busan_10_subyeon.jpg": "수변최고 돼지국밥",
+          "busan_11_bonjeon.jpg": "본전 돼지국밥",
+          "busan_12_tonsho.jpg": "톤쇼우(돈카츠)",
+          "busan_13_palate.jpg": "Palate(파인 다이닝)",
+          "busan_14_dongrae.jpg": "동래 할매파전",
+          "busan_15_original.jpg": "원조 18번 완당(국수)",
+          "busan_16_uhwa.jpg": "유화(스시 오마카세)",
 
           // #대구
+          "daegu_1_anmyeon.jpg": "부산안면옥(맛있는 녀석들)",
+          "daegu_2_kingspiderrest.jpg": "왕거미식당(뭉티기)",
+          "daegu_3_miseongdangdump.jpg": "미성당 납작만두(분식)",
+          "daegu_4_middle.jpg": "중앙떡볶이",
+          "daegu_5_sinsongja.jpg": "신송자 신마산식당(국밥)",
+          "daegu_6_udongbulgogi.jpg": "원조 북성로우동불고기",
+          "daegu_7_80.jpg": "팔공막창",
+          "daegu_8_subong.jpg": "수봉반점",
+          "daegu_9_goonwerest.jpg": "군위식당(성시경의 먹을텐데)",
+          "daegu_10_doma29rest.jpg": "도마29",
+          "daegu_11_90tanrest.jpg": "구공탄막창",
+          "daegu_12_sapa.jpg": "사파키친(베트남)",
+          "daegu_13_bunggeul.jpg": "벙글벙글 찜갈비",
+          "daegu_14_dangol.jpg": "단골식당(백종원의 3대천왕)",
+          "daegu_15_pureon.jpg": "푸른회식당(오징어무침회)",
+          "daegu_16_nok.jpg": "녹향구이(뭉티기)",
+
+          // #인천
+          "incheon_1_sinpo.jpg": "원조신포닭강정",
+          "incheon_2.gong.jpg": "공화춘",
+          "incheon_3_hwanghae.jpg": "황해해물칼국수",
+          "incheon_4_cungnam.jpg": "충남서산집(꽃게탕)",
+          "incheon_5_india.jpg": "스와갓 인디아레스토랑",
+          "incheon_6_myeong.jpg": "명동식당",
+          "incheon_7_jung.jpg": "중화루",
+          "incheon_8_inha.jpg": "인하의집",
+          "incheon_9_sinseong.jpg": "신승반점(수요미식회)",
+          "incheon_10_garibi.jpg": "가리비 칼국수",
+          "incheon_11_ogil.jpg": "권오길손국수 본점",
+          "incheon_12_rabi.jpg": "라비스타",
+          "incheon_13_bulmal.jpg": "벌말매운탕",
+          "incheon_14_onsen.jpg": "온센 신포점",
+          "incheon_15_buam.jpg": "부암갈비",
+          "incheon_16_sumil.jpg": "수밀원",
+
+          // #광주
+          "gwangju_1_song.jpg": "송정떡갈비(백종원의 3대천왕)",
+          "gwangju_2_ori.jpg": "영미오리탕",
+          "gwangju_3_dae.jpg": "대광식당(육전)",
+          "gwangju_4_mimi.jpg": "미미원(육전)",
+          "gwangju_5_hwang.jpg": "황솔촌(갈비)",
+          "gwangju_6_first.jpg": "퍼스트네팔",
+          "gwangju_7_bo.jpg": "보광옥(갈비)",
+          "gwangju_8_haenam.jpg": "해남식당(해장국)",
+          "gwangju_9_daegeum.jpg": "대금육회(생차돌박이)",
+          "gwangju_10_kan.jpg": "칸세이스시",
+          "gwangju_11_menta.jpg": "멘타루",
+          "gwangju_12_bit.jpg": "빛고을떡갈비",
+          "gwangju_13_tobang.jpg": "토방닭매운탕",
+          "gwangju_14_ganjang.jpg": "오늘부터애간장(게장)",
+          "gwangju_15_moms.jpg": "엄마네돼지찌개",
+          "gwangju_16_blue.jpg": "르시엘블루(양식)",
+
+          // #대전
+          "daejeon_1_kal.jpg": "오씨칼국수",
+          "daejeon_2_cow.jpg": "태평소국밥",
+          "daejeon_3_gwang.jpg": "광천식당(두부두루치기)",
+          "daejeon_4_star.jpg": "별난집(두부두루치기)",
+          "daejeon_5_madangand.jpg": "마당에모닥불하늘엔둥근달",
+          "daejeon_6_dong.jpg": "동천홍(사천탕면)",
+          "daejeon_7_king.jpg": "킹덤뷔페",
+          "daejeon_8_nuo.jpg": "누오보나폴리(화덕피자)",
+          "daejeon_9_ildang.jpg": "일당감자탕",
+          "daejeon_10_ok.jpg": "대전옥(한정식)",
+          "daejeon_11_sundae.jpg": "오문창순대국밥",
+          "daejeon_12_hanyoung.jpg": "한영식당(닭볶음탕)",
+          "daejeon_13_jogi.jpg": "조기종의 향미각",
+          "daejeon_14_jinro.jpg": "진로집(두부두루치기)",
+          "daejeon_15_nong.jpg": "농민순대",
+          "daejeon_16_baro.jpg": "바로그집(분식)",
+
+          // #울산
+          "ulsan_1_unyang.jpg": "언양 기와집 불고기",
+          "ulsan_2_bau.jpg": "떡바우횟집",
+          "ulsan_3_unyang.jpg": "언양 진미불고기",
+          "ulsan_4_nama.jpg": "나마스까르",
+          "ulsan_5_grapa.jpg": "그라파 피자리아",
+          "ulsan_6_gyeong.jpg": "경복궁 울산본점",
+          "ulsan_7_sasi.jpg": "사시스세소",
+          "ulsan_8_ani.jpg": "아니마(양식)",
+          "ulsan_9_the.jpg": "더만족 울산대점",
+          "ulsan_10_hadong.jpg": "하동식당(돼지국밥)",
+          "ulsan_11_gorae.jpg": "고래고기원조할매집본점",
+          "ulsan_12_unyang1.jpg": "언양1번가 주먹떡갈비",
+          "ulsan_13_seo.jpg": "서양식당(양식)",
+          "ulsan_14_938.jpg": "938 본점(양식)",
+          "ulsan_15_sul.jpg": "설어정 울산성남점(양식)",
+          "ulsan_16_ham.jpg": "함양집(육회비빔밥)",
         };
 
         images = fileList.map((file) => {
@@ -165,6 +266,10 @@
             name: restaurantMapping[file.name] || "식당 이름 없음",
           };
         });
+
+        // 가져온 이미지를 localStorage에 캐싱합니다.
+        localStorage.setItem(cacheKey, JSON.stringify(images));
+
         startTournament();
       }
 
